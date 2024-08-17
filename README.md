@@ -1,8 +1,3 @@
-# Abondance-ia
-Voici un exemple de fichier `README.md` pour votre projet, incluant la fiche d'installation pour Windows. Ce fichier est prêt à être copié-collé dans votre dépôt GitHub :
-
----
-
 # IA Abondance
 
 ## Description
