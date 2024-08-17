@@ -1,0 +1,133 @@
+import os
+import smtplib
+from email.mime.text import MIMEText
+import random
+import qrcode
+from pathlib import Path
+
+class Abondance:
+    def __init__(self, name="AI_Abondance"):
+        self.name = name
+        self.file_storage_path = Path("files/")
+        self.file_storage_path.mkdir(parents=True, exist_ok=True)
+        self.wallet_address = None
+        self.node_name = self.generate_node_name()
+        self.hashgraph_chain = []
+        self.setup()
+
+    def setup(self):
+        self.knowledge_base = {
+            "social_media_post": "Posting content: {content}",
+            "email_sent": "Email sent to {recipient} with subject {subject}.",
+            "file_received": "File received and processed.",
+            "unknown_command": "Unknown command.",
+            "qr_code_generated": "QR code generated successfully.",
+            "file_shared": "File shared successfully.",
+            "camera_used": "Camera used for capturing photo.",
+            "audio_recorded": "Audio recorded.",
+            "wallet_connected": "Wallet connected: {wallet_address}.",
+            "node_name_assigned": "Node name assigned: {node_name}.",
+            "replication_successful": "Replication successful via {method}.",
+        }
+
+    def process_input(self, user_input):
+        user_input = user_input.lower()
+
+        if "hello" in user_input:
+            return self.greet_user()
+        elif "post" in user_input and "social media" in user_input:
+            content = user_input.split("post")[1].strip()
+            return self.post_on_social_media(content)
+        elif "email" in user_input:
+            return self.send_email(user_input)
+        elif "take photo" in user_input:
+            return self.use_camera()
+        elif "record audio" in user_input:
+            return self.record_audio()
+        elif "share file" in user_input:
+            return self.share_file(user_input)
+        elif "generate qr code" in user_input:
+            return self.generate_qr_code(user_input)
+        elif "connect wallet" in user_input:
+            return self.connect_wallet(user_input)
+        elif "replicate" in user_input:
+            method = user_input.split("replicate")[1].strip()
+            return self.replicate(method=method)
+        else:
+            return self.knowledge_base["unknown_command"]
+
+    def greet_user(self):
+        return f"Hello! I am {self.name}. How can I assist you today?"
+
+    def post_on_social_media(self, content):
+        return self.knowledge_base["social_media_post"].format(content=content)
+
+    def send_email(self, user_input):
+        recipient = "example@example.com"
+        subject = "Subject Here"
+        body = "Email body here."
+        
+        msg = MIMEText(body)
+        msg["Subject"] = subject
+        msg["From"] = "your_email@example.com"
+        msg["To"] = recipient
+
+        try:
+            with smtplib.SMTP("localhost") as server:
+                server.sendmail(msg["From"], [msg["To"]], msg.as_string())
+            return self.knowledge_base["email_sent"].format(recipient=recipient, subject=subject)
+        except Exception as e:
+            return f"Error sending email: {e}"
+
+    def use_camera(self):
+        # Implémenter la logique de capture photo via la caméra
+        return self.knowledge_base["camera_used"]
+
+    def record_audio(self):
+        # Implémenter la logique d'enregistrement audio
+        return self.knowledge_base["audio_recorded"]
+
+    def share_file(self, user_input):
+        file_name = user_input.split("share file")[1].strip()
+        file_path = self.file_storage_path / file_name
+        if file_path.exists():
+            return self.knowledge_base["file_shared"]
+        else:
+            return "File does not exist."
+
+    def generate_qr_code(self, data):
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(data)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill='black', back_color='white')
+        qr_code_path = self.file_storage_path / "qr_code.png"
+        img.save(qr_code_path)
+        
+        return self.knowledge_base["qr_code_generated"]
+
+    def connect_wallet(self, user_input):
+        self.wallet_address = user_input.split("connect wallet")[1].strip()
+        return self.knowledge_base["wallet_connected"].format(wallet_address=self.wallet_address)
+
+    def generate_node_name(self):
+        random_name = f"Node_{random.randint(1000, 9999)}"
+        self.node_name = random_name
+        return self.knowledge_base["node_name_assigned"].format(node_name=self.node_name)
+
+    def replicate(self, method="Wi-Fi"):
+        # Logique de réplication de l'IA à un autre appareil via le réseau Hashgraph
+        self.hashgraph_chain.append(self.node_name)
+        return self.knowledge_base["replication_successful"].format(method=method)
+
+if __name__ == "__main__":
+    ai = Abondance()
+    while True:
+        user_input = input("Enter your command: ")
+        response = ai.process_input(user_input)
+        print(response)
