@@ -5,15 +5,35 @@ import random
 import qrcode
 from pathlib import Path
 
+from session_manager import SessionManager
+
 class Abondance:
-    def __init__(self, name="AI_Abondance"):
+    def __init__(self, name="AI_Abondance", user_id="default", session_dir=None):
         self.name = name
         self.file_storage_path = Path("files/")
         self.file_storage_path.mkdir(parents=True, exist_ok=True)
-        self.wallet_address = None
-        self.node_name = self.generate_node_name()
-        self.hashgraph_chain = []
+        self.session = SessionManager(user_id=user_id, session_dir=session_dir)
         self.setup()
+        self._load_session_state()
+
+    def _load_session_state(self):
+        """Restore persisted user data or initialise it on first run."""
+        self.wallet_address = self.session.get("wallet_address")
+        self.node_name = self.session.get("node_name")
+        self.hashgraph_chain = list(self.session.get("hashgraph_chain", []))
+        if not self.node_name:
+            self.generate_node_name()
+        self._persist_session_state()
+
+    def _persist_session_state(self):
+        """Write the current wallet/node/chain state to the session file."""
+        self.session.update(
+            user_id=self.session.user_id,
+            name=self.name,
+            wallet_address=self.wallet_address,
+            node_name=self.node_name,
+            hashgraph_chain=self.hashgraph_chain,
+        )
 
     def setup(self):
         self.knowledge_base = {
@@ -28,6 +48,11 @@ class Abondance:
             "wallet_connected": "Wallet connected: {wallet_address}.",
             "node_name_assigned": "Node name assigned: {node_name}.",
             "replication_successful": "Replication successful via {method}.",
+            "session_switched": "Session switched to user {user_id}.",
+            "session_status": (
+                "User {user_id} | node: {node_name} | wallet: {wallet_address}"
+            ),
+            "session_cleared": "Session data for user {user_id} cleared.",
         }
 
     def process_input(self, user_input):
@@ -53,6 +78,13 @@ class Abondance:
         elif "replicate" in user_input:
             method = user_input.split("replicate")[1].strip()
             return self.replicate(method=method)
+        elif "login" in user_input:
+            user_id = user_input.split("login", 1)[1].strip()
+            return self.switch_user(user_id)
+        elif "whoami" in user_input:
+            return self.whoami()
+        elif "logout" in user_input:
+            return self.logout()
         else:
             return self.knowledge_base["unknown_command"]
 
@@ -113,17 +145,50 @@ class Abondance:
 
     def connect_wallet(self, user_input):
         self.wallet_address = user_input.split("connect wallet")[1].strip()
+        self.session.set("wallet_address", self.wallet_address)
         return self.knowledge_base["wallet_connected"].format(wallet_address=self.wallet_address)
 
     def generate_node_name(self):
         random_name = f"Node_{random.randint(1000, 9999)}"
         self.node_name = random_name
+        self.session.set("node_name", self.node_name)
         return self.knowledge_base["node_name_assigned"].format(node_name=self.node_name)
 
     def replicate(self, method="Wi-Fi"):
         # Logique de réplication de l'IA à un autre appareil via le réseau Hashgraph
         self.hashgraph_chain.append(self.node_name)
+        self.session.set("hashgraph_chain", self.hashgraph_chain)
         return self.knowledge_base["replication_successful"].format(method=method)
+
+    def switch_user(self, user_id):
+        """Switch to another user's persisted session."""
+        if not user_id:
+            return "Please provide a user id, e.g. 'login alice'."
+        try:
+            self.session.switch_user(user_id)
+        except ValueError as exc:
+            return f"Invalid user id: {exc}"
+        self._load_session_state()
+        return self.knowledge_base["session_switched"].format(user_id=self.session.user_id)
+
+    def whoami(self):
+        """Return a summary of the currently active user's session."""
+        return self.knowledge_base["session_status"].format(
+            user_id=self.session.user_id,
+            node_name=self.node_name,
+            wallet_address=self.wallet_address or "<not connected>",
+        )
+
+    def logout(self):
+        """Clear the active user's persisted data and reset in-memory state."""
+        user_id = self.session.user_id
+        self.session.clear()
+        self.wallet_address = None
+        self.node_name = None
+        self.hashgraph_chain = []
+        self.generate_node_name()
+        self._persist_session_state()
+        return self.knowledge_base["session_cleared"].format(user_id=user_id)
 
 if __name__ == "__main__":
     ai = Abondance()
